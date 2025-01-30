@@ -6,7 +6,7 @@ import { UserDocument } from "../../../types/trades";
 
 export async function POST(req: Request) {
   // Verify webhook signature
-  const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+  const WEBHOOK_SECRET = process.env.SIGNING_SECRET;
   if (!WEBHOOK_SECRET) {
     console.error("Missing WEBHOOK_SECRET environment variable");
     return new Response("Missing webhook secret", {
