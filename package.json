@@ -2,6 +2,7 @@
   "name": "leetcode-anki",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,10 +12,13 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,md,mdx,css,yaml,yml}\"",
     "check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,mdx,css,yaml,yml}\"",
     "type-check": "tsc --noEmit",
-    "verify": "npm run check && npm run lint && npm run type-check",
-    "prepare": "husky"
+    "verify": "npm run format && npm run lint && npm run type-check",
+    "prepare": "husky",
+    "build-scripts": "tsc -p tsconfig.scripts.json && move-file dist/scripts/uploadCards.js dist/scripts/uploadCards.mjs",
+    "upload-cards": "npm run build-scripts && node dist/scripts/uploadCards.mjs"
   },
   "dependencies": {
+    "firebase": "^11.2.0",
     "next": "15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -29,9 +33,11 @@
     "eslint": "^8.9.0",
     "eslint-config-next": "15.1.6",
     "husky": "^9.1.7",
+    "move-file-cli": "^3.0.0",
     "postcss": "^8",
     "prettier": "^2.8.8",
     "tailwindcss": "^3.4.1",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

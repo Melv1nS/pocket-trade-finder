@@ -1,8 +1,8 @@
-# Leetcode Anki
+# Pokemon Pocket Trade Finder
 Every time you choose to apply a rule(s), explicitly state the rule(s) in the output. You can abbreviate the rule description to a single word or phrase.
 
 ## Project Context
- A web application that helps users prepare for leetcode interviews by providing a platform to track their progress with spaced repetition. Uses common lists of leetcode questions such as the blind 75, neetcode 150, and top 100 liked questions.
+ A web application that will allow users to find pokemon pocket tcg cards for trade. Users can sign up with their unique friend ID and then mark cards they have for trade. Other users can then search for cards they need and contact the card owner to complete the trade.
 
 ## Code Style and Structure
 - Write concise, technical TypeScript code with accurate examples
@@ -40,6 +40,7 @@ Every time you choose to apply a rule(s), explicitly state the rule(s) in the ou
 Frontend : Next.js 14 (App Router)
 Styling: Tailwind CSS
 Hosting: Vercel
+Database: Cloud Firestore
 
 # New File Suggestions
 IMPORTANT: For every new file suggestion, you must:
