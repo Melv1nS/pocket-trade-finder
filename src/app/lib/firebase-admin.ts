@@ -2,11 +2,12 @@ import * as admin from "firebase-admin";
 
 // Function to clean and format private key
 function formatPrivateKey(key: string | undefined) {
-  if (!key) throw new Error('FIREBASE_PRIVATE_KEY is not set in environment variables');
+  if (!key)
+    throw new Error("FIREBASE_PRIVATE_KEY is not set in environment variables");
   // If the key already contains newline characters, assume it's formatted correctly
-  if (key.includes('\n')) return key;
+  if (key.includes("\n")) return key;
   // Otherwise, replace literal '\n' strings with newline characters
-  return key.replace(/\\n/g, '\n');
+  return key.replace(/\\n/g, "\n");
 }
 
 if (!admin.apps.length) {
@@ -19,7 +20,7 @@ if (!admin.apps.length) {
       }),
     });
   } catch (error) {
-    console.error('Firebase admin initialization error:', error);
+    console.error("Firebase admin initialization error:", error);
   }
 }
 
