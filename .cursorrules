@@ -41,6 +41,7 @@ Frontend : Next.js 14 (App Router)
 Styling: Tailwind CSS
 Hosting: Vercel
 Database: Cloud Firestore
+Authentication: Clerk + Firebase
 
 # New File Suggestions
 IMPORTANT: For every new file suggestion, you must:

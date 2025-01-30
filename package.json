@@ -18,10 +18,13 @@
     "upload-cards": "npm run build-scripts && node dist/scripts/uploadCards.mjs"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.10.4",
     "firebase": "^11.2.0",
+    "firebase-admin": "^13.0.2",
     "next": "15.1.6",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "svix": "^1.45.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
