@@ -18,9 +18,6 @@ Every time you choose to apply a rule(s), explicitly state the rule(s) in the ou
         ├── api/            # Api Routes
             ├── sample-route/     # name of the route
                 ├── route.ts      
-        ├── auth/
-            ├── signin/
-            ├── callback/
         ├── components/     # Shared React components
         ├── utils/          # Helper functions
         ├── types/          # TypeScript types
@@ -43,39 +40,96 @@ Hosting: Vercel
 Database: Cloud Firestore
 Authentication: Clerk + Firebase
 
-## Database Structure
+## API Routes Documentation
++ 
++ ### Card Discovery & Catalog Routes
++ 
++ #### GET /api/cards
++ - Fetches all cards from all packs
++ - Sorts cards by pack order (Genetic Apex A1 first, then Mythical Islands A2)
++ - Returns array of CardPreview: { id, image_url, name, pack, rarity }
++ 
++ #### GET /api/cards/[pack]/[id]
++ - Fetches detailed information for a specific card
++ - Parameters: 
++   - pack: Pack name (e.g., "Genetic Apex A1")
++   - id: Card number within pack
++ - Returns detailed card information
++ 
++ #### GET /api/cards/[pack]/[id]/trading-users
++ - Fetches all users who have this specific card available for trade
++ - Returns array of users with their friend codes and wishlists
++ 
++ ### User Management Routes
++ 
++ #### /api/users/me/friend-code
++ - GET: Check if current user has set their friend code
++ - POST: Set user's friend code (format: XXXX-XXXX-XXXX-XXXX)
++ - Validates friend code format
++ - Creates/updates user document with initial trade data
++ 
++ #### /api/users/me/cards-for-trade
++ - GET: Fetch current user's cards available for trade
++ - POST: Mark a card as available for trade
++ - DELETE: Remove a card from trade
++ - Updates both user document and cards-for-trade collection
++ 
++ ### Trade Management Routes
++ 
++ #### POST /api/users/trades/propose
++ - Creates a new trade proposal between users
++ - Body: { friendId, cardToTrade, cardToReceive, message }
++ - Updates both users' trade lists:
++   - Adds to proposer's 'proposed' array
++   - Adds to receiver's 'requests' array
++ 
++ ### Webhook Routes
++ 
++ #### POST /api/webhook/clerk
++ - Handles Clerk authentication webhooks
++ - Syncs user data between Clerk and Firebase
++ - Events:
++   - user.created: Creates Firebase user and initial Firestore document
++   - user.updated: Updates Firebase user data
++   - user.deleted: Removes user from Firebase and Firestore
+
+## Firestore Database Structure
 - Users (collection)
     - user_id (document)
         - friendCode: "123456" (string)
-        - cardsForTrade: ["packs/Genetic Apex A1/1", "packs/Genetic Apex A1/2"] (array of strings)
-        - wishlist: ["packs/Genetic Apex A1/1", "packs/Genetic Apex A1/2"] (array of strings)
+        - cardsForTrade: ["genetic-apex-a1/1", "genetic-apex-a1/2"] (array of strings)
+        - wishlist: ["genetic-apex-a1/1", "genetic-apex-a1/2"] (array of strings)
         - trades: { 
             proposed: [{ 
                 friendId: "123456", (string)
-                cardToTrade: "packs/Genetic Apex A1/1", (string)
-                cardToReceive: "packs/Genetic Apex A1/1", (string)
+                cardToTrade: "genetic-apex-a1/1", (string)
+                cardToReceive: "genetic-apex-a1/1", (string)
                 timestamp: "2024-01-01", (string)
                 message: "Hello" (string)
             }], 
             requests: [
                 { 
                     friendId: "123456", (string)
-                    cardToTrade: "packs/Genetic Apex A1/1", (string)
-                    cardToReceive: "packs/Genetic Apex A1/1", (string)
+                    cardToTrade: "genetic-apex-a1/1", (string)
+                    cardToReceive: "genetic-apex-a1/1", (string)
                     timestamp: "2024-01-01", (string)
                     message: "Hello" (string)
                 }
             ] 
         } (object)
+- cards-for-trade (collection)
+    - {packId}-{cardId} (document) // e.g., "genetic-apex-a1-1"
+        - {userId} (field)
 - packs (collection)
-    - Genetic Apex A1 (subcollection)
-        - 1 (subcollection)
-            - 1 (document)
-                image_url: "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/pocket/A1/A1_001_EN.webp" (string)
-                name: "Bulbasaur" (string)
-                pack: "Genetic Apex A1" (string)
-                rarity: "1 Diamond" (string)
+    - genetic-apex-a1 (document)
+        - 1 (field -> corresdponds to one card)
+            image_url: "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/pocket/A1/A1_001_EN.webp" (string)
+            name: "Bulbasaur" (string)
+            pack: "Genetic Apex A1" (string)
+            rarity: "1 Diamond" (string)
 
+## IMPORTANT
+- ALL Database actions should be done in a secure API route, not on the frontend.
 
 ## Naming Conventions
 - Use lowercase with dashes for directories (e.g., components/form-wizard)

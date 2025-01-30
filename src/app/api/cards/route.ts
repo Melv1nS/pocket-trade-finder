@@ -1,52 +1,68 @@
 import { db } from "@/app/lib/firebase-admin";
 import { NextResponse } from "next/server";
 
-interface CardPreview {
-  id: string;
-  image_url: string;
-}
-
 interface CardData {
+  name: string;
   image_url: string;
-  [key: string]: unknown;
+  pack: string;
+  rarity: string;
 }
 
-interface CardsByPack {
-  [packName: string]: CardPreview[];
+interface PackData {
+  [key: string]: CardData;
 }
 
+// Define pack order
+const PACK_ORDER = {
+  "Genetic Apex A1": 1,
+  "Mythical Islands A2": 2,
+};
+
+// This route fetches all cards from all packs
+// Database: Reads from "packs" collection
+// Purpose:
+// - Retrieves all available cards across all packs
+// - Sorts them by pack order (Genetic Apex A1 first, then Mythical Islands A2)
+// - Returns a list of card previews with basic info (id, image, name, pack, rarity)
 export async function GET() {
   try {
-    const packsRef = db.collection("packs");
-    const packsSnapshot = await packsRef.get();
-    const cardsByPack: CardsByPack = {};
+    const packsSnapshot = await db.collection("packs").get();
+    const cards: Array<CardData & { id: string }> = [];
 
-    for (const packDoc of packsSnapshot.docs) {
-      const packName = packDoc.id;
-      const packData = packDoc.data();
-      const cards: CardPreview[] = [];
-
-      // Each field in the document is a card number with its data
-      Object.entries(packData).forEach(([cardNumber, cardData]) => {
-        if (typeof cardData === "object" && cardData !== null) {
-          const typedCardData = cardData as CardData;
-          cards.push({
-            id: cardNumber,
-            image_url: typedCardData.image_url || "",
-          });
-        }
+    packsSnapshot.forEach((packDoc) => {
+      const packData = packDoc.data() as PackData;
+      Object.entries(packData).forEach(([id, cardData]) => {
+        cards.push({
+          id,
+          ...cardData,
+        });
       });
+    });
 
-      // Sort cards by their number
-      cards.sort((a, b) => parseInt(a.id) - parseInt(b.id));
-      cardsByPack[packName] = cards;
+    // Sort cards by pack order and then by card ID
+    const sortedCards = cards.sort((a, b) => {
+      // First sort by pack order
+      const packOrderDiff =
+        (PACK_ORDER[a.pack as keyof typeof PACK_ORDER] || 999) -
+        (PACK_ORDER[b.pack as keyof typeof PACK_ORDER] || 999);
+
+      if (packOrderDiff !== 0) return packOrderDiff;
+
+      // Then sort by card ID within each pack
+      return parseInt(a.id) - parseInt(b.id);
+    });
+
+    console.log(`Total cards found: ${sortedCards.length}`); // Debug log
+
+    if (sortedCards.length === 0) {
+      console.log("Warning: No cards were found in the database"); // Debug log
     }
 
-    return NextResponse.json(cardsByPack);
+    return NextResponse.json(sortedCards);
   } catch (error) {
     console.error("Error fetching cards:", error);
     return NextResponse.json(
-      { error: "Failed to fetch cards" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

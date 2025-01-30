@@ -2,10 +2,9 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/app/lib/firebase-admin";
 import { NextResponse } from "next/server";
 
-// Remove the edge runtime config
-// export const runtime = 'edge';
-export const revalidate = 60; // Keep the cache config
+export const revalidate = 60;
 
+// GET - check if user has set their friend code
 export async function GET() {
   try {
     const { userId } = await auth();
@@ -14,7 +13,6 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Optimize the query by only requesting the friendCode field
     const userDoc = await db.collection("users").doc(userId).get();
     const friendCode = userDoc.get("friendCode");
 
@@ -30,6 +28,7 @@ export async function GET() {
   }
 }
 
+// POST - set user's friend code
 export async function POST(request: Request) {
   try {
     const { userId } = await auth();
