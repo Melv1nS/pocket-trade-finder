@@ -43,13 +43,39 @@ Hosting: Vercel
 Database: Cloud Firestore
 Authentication: Clerk + Firebase
 
-# New File Suggestions
-IMPORTANT: For every new file suggestion, you must:
-1. Start with "Create new file at:" followed by the complete path
-3. Include the file name with appropriate extension
+## Database Structure
+- Users (collection)
+    - user_id (document)
+        - friendCode: "123456" (string)
+        - cardsForTrade: ["packs/Genetic Apex A1/1", "packs/Genetic Apex A1/2"] (array of strings)
+        - wishlist: ["packs/Genetic Apex A1/1", "packs/Genetic Apex A1/2"] (array of strings)
+        - trades: { 
+            proposed: [{ 
+                friendId: "123456", (string)
+                cardToTrade: "packs/Genetic Apex A1/1", (string)
+                cardToReceive: "packs/Genetic Apex A1/1", (string)
+                timestamp: "2024-01-01", (string)
+                message: "Hello" (string)
+            }], 
+            requests: [
+                { 
+                    friendId: "123456", (string)
+                    cardToTrade: "packs/Genetic Apex A1/1", (string)
+                    cardToReceive: "packs/Genetic Apex A1/1", (string)
+                    timestamp: "2024-01-01", (string)
+                    message: "Hello" (string)
+                }
+            ] 
+        } (object)
+- packs (collection)
+    - Genetic Apex A1 (subcollection)
+        - 1 (subcollection)
+            - 1 (document)
+                image_url: "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/pocket/A1/A1_001_EN.webp" (string)
+                name: "Bulbasaur" (string)
+                pack: "Genetic Apex A1" (string)
+                rarity: "1 Diamond" (string)
 
-Example:
-Create new file at: src/app/utils/dateFormatter.ts
 
 ## Naming Conventions
 - Use lowercase with dashes for directories (e.g., components/form-wizard)
@@ -100,12 +126,6 @@ Create new file at: src/app/utils/dateFormatter.ts
 - Sanitize user inputs
 - Handle sensitive data properly
 - Implement proper CORS handling
-
-## Documentation
-- Maintain clear README with setup instructions
-- Document API interactions and data flows
-- Don't include comments unless it's for complex logic
-- Document permission requirements
 
 ## Development Workflow
 - Use proper version control
