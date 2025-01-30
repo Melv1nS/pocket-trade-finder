@@ -33,6 +33,8 @@ export default function CardPage(): React.ReactElement {
   const [usersError, setUsersError] = useState<string | null>(null);
   const [isMarkingForTrade, setIsMarkingForTrade] = useState(false);
   const [isMarkedForTrade, setIsMarkedForTrade] = useState(false);
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [isUpdatingWishlist, setIsUpdatingWishlist] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -92,6 +94,23 @@ export default function CardPage(): React.ReactElement {
     }
   }, [pack, id, loadTradingUsers]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    async function checkWishlist() {
+      try {
+        const response = await fetch("/api/users/me/wishlist");
+        if (!response.ok) throw new Error("Failed to fetch wishlist");
+        const data = await response.json();
+        setIsInWishlist(data.wishlist.includes(`${pack}-${id}`));
+      } catch (error) {
+        console.error("Error checking wishlist:", error);
+      }
+    }
+
+    checkWishlist();
+  }, [user, pack, id]);
+
   async function handleMarkForTrade() {
     if (!user) return;
 
@@ -117,6 +136,30 @@ export default function CardPage(): React.ReactElement {
       console.error("Error marking card for trade:", error);
     } finally {
       setIsMarkingForTrade(false);
+    }
+  }
+
+  async function handleWishlistToggle() {
+    if (!user) return;
+
+    setIsUpdatingWishlist(true);
+    try {
+      const response = await fetch("/api/users/me/wishlist", {
+        method: isInWishlist ? "DELETE" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cardId: `${pack}-${id}`,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update wishlist");
+      setIsInWishlist(!isInWishlist);
+    } catch (error) {
+      console.error("Error updating wishlist:", error);
+    } finally {
+      setIsUpdatingWishlist(false);
     }
   }
 
@@ -163,18 +206,12 @@ export default function CardPage(): React.ReactElement {
                 priority
               />
             </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="flex justify-between items-start">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                {card.name}
-              </h1>
-              {user && (
+            {user && (
+              <div className="mt-4 space-y-2">
                 <button
                   onClick={handleMarkForTrade}
                   disabled={isMarkingForTrade || isMarkedForTrade}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
+                  className={`w-full px-4 py-2 rounded-lg transition-colors ${
                     isMarkedForTrade
                       ? "bg-green-600 text-white cursor-not-allowed"
                       : isMarkingForTrade
@@ -188,7 +225,30 @@ export default function CardPage(): React.ReactElement {
                     ? "Marking..."
                     : "Mark for Trade"}
                 </button>
-              )}
+                <button
+                  onClick={handleWishlistToggle}
+                  disabled={isUpdatingWishlist}
+                  className={`w-full px-4 py-2 rounded-lg transition-colors ${
+                    isInWishlist
+                      ? "bg-yellow-600 text-white hover:bg-yellow-700"
+                      : "bg-gray-600 text-white hover:bg-gray-700"
+                  } ${isUpdatingWishlist ? "opacity-50 cursor-wait" : ""}`}
+                >
+                  {isUpdatingWishlist
+                    ? "Updating..."
+                    : isInWishlist
+                    ? "Remove from Wishlist"
+                    : "Add to Wishlist"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <div className="flex justify-between items-start">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                {card.name}
+              </h1>
             </div>
             <div className="space-y-4">
               <div>

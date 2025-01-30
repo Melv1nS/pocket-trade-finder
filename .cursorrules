@@ -97,21 +97,21 @@ Authentication: Clerk + Firebase
 - Users (collection)
     - user_id (document)
         - friendCode: "123456" (string)
-        - cardsForTrade: ["genetic-apex-a1/1", "genetic-apex-a1/2"] (array of strings)
-        - wishlist: ["genetic-apex-a1/1", "genetic-apex-a1/2"] (array of strings)
+        - cardsForTrade: ["genetic-apex-a1-1", "genetic-apex-a1-2"] (array of strings)
+        - wishlist: ["genetic-apex-a1-1", "genetic-apex-a1-2"] (array of strings)
         - trades: { 
             proposed: [{ 
                 friendId: "123456", (string)
-                cardToTrade: "genetic-apex-a1/1", (string)
-                cardToReceive: "genetic-apex-a1/1", (string)
+                cardToTrade: "genetic-apex-a1-1", (string)
+                cardToReceive: "genetic-apex-a1-1", (string)
                 timestamp: "2024-01-01", (string)
                 message: "Hello" (string)
             }], 
             requests: [
                 { 
                     friendId: "123456", (string)
-                    cardToTrade: "genetic-apex-a1/1", (string)
-                    cardToReceive: "genetic-apex-a1/1", (string)
+                    cardToTrade: "genetic-apex-a1-1", (string)
+                    cardToReceive: "genetic-apex-a1-1", (string)
                     timestamp: "2024-01-01", (string)
                     message: "Hello" (string)
                 }
