@@ -3,15 +3,10 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { type NextRequest } from "next/server";
 
-type RouteContext = {
-  params: {
-    pack: string;
-    id: string;
-  };
-  searchParams: { [key: string]: string | string[] | undefined };
-};
-
-export async function GET(request: NextRequest, { params }: RouteContext) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { pack: string; id: string } }
+) {
   try {
     const { userId } = await auth();
     if (!userId) {
