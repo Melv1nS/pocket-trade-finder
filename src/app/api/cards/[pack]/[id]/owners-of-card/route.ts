@@ -1,11 +1,10 @@
 import { db } from "@/app/lib/firebase-admin";
 import { auth } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
-import { type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { pack: string; id: string } }
+  { params }: { params: Promise<{ pack: string; id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -13,7 +12,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { pack, id } = params;
+    const { pack, id } = await params;
     const cardId = `${pack}-${id}`.toLowerCase();
 
     // Get the card document
