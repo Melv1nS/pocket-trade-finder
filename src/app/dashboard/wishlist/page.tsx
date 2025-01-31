@@ -30,10 +30,9 @@ export default function WishList(): React.ReactElement {
 
         // Then fetch the details for each card
         const cardPromises = wishlist.map(async (cardId: string) => {
-          // Parse the card ID format (e.g., "genetic-apex-a1-1")
           const lastDashIndex = cardId.lastIndexOf("-");
-          const pack = cardId.substring(0, lastDashIndex); // "genetic-apex-a1"
-          const id = cardId.substring(lastDashIndex + 1); // "1"
+          const pack = cardId.substring(0, lastDashIndex);
+          const id = cardId.substring(lastDashIndex + 1);
 
           const response = await fetch(`/api/cards/${pack}/${id}`);
           if (!response.ok) throw new Error(`Failed to fetch card ${cardId}`);

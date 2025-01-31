@@ -96,14 +96,14 @@ Authentication: Clerk + Firebase
 ## Firestore Database Structure
 - Users (collection)
     - user_id (document)
-        - friendCode: "123456" (string)
-        - cardsForTrade: ["genetic-apex-a1-1", "genetic-apex-a1-2"] (array of strings)
+        - friend-code: "123456" (string)
+        - available-to-trade: ["genetic-apex-a1-1", "genetic-apex-a1-2"] (array of strings)
         - wishlist: ["genetic-apex-a1-1", "genetic-apex-a1-2"] (array of strings)
         - trades: { 
             proposed: [{ 
                 friendId: "123456", (string)
                 cardToTrade: "genetic-apex-a1-1", (string)
-                cardToReceive: "genetic-apex-a1-1", (string)
+                cardToReceive: "genetic-apex-a1-2", (string)
                 timestamp: "2024-01-01", (string)
                 message: "Hello" (string)
             }], 
@@ -111,18 +111,21 @@ Authentication: Clerk + Firebase
                 { 
                     friendId: "123456", (string)
                     cardToTrade: "genetic-apex-a1-1", (string)
-                    cardToReceive: "genetic-apex-a1-1", (string)
+                    cardToReceive: "genetic-apex-a1-2", (string)
                     timestamp: "2024-01-01", (string)
                     message: "Hello" (string)
                 }
             ] 
         } (object)
-- cards-for-trade (collection)
+- card-trades (collection)
     - {packId}-{cardId} (document) // e.g., "genetic-apex-a1-1"
-        - {userId} (field)
+        - have (subcollection)
+            - {user_id} (document)
+        - want (subcollection)
+            - {user_id} (document)
 - packs (collection)
     - genetic-apex-a1 (document)
-        - 1 (field -> corresdponds to one card)
+        - 1 (field -> corresponds to one card)
             image_url: "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/pocket/A1/A1_001_EN.webp" (string)
             name: "Bulbasaur" (string)
             pack: "Genetic Apex A1" (string)

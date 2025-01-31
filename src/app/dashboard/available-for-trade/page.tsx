@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
 
-interface CardForTrade {
+interface Card {
   id: string;
   name: string;
   image_url: string;
@@ -13,29 +13,31 @@ interface CardForTrade {
   rarity: string;
 }
 
-export default function TradeList(): React.ReactElement {
+export default function AvailableForTrade(): React.ReactElement {
   const { user } = useUser();
-  const [cards, setCards] = useState<CardForTrade[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchTradeList() {
       try {
-        const response = await fetch("/api/users/me/cards-for-trade");
+        const response = await fetch("/api/users/me/available-for-trade");
         if (!response.ok) throw new Error("Failed to fetch trade list");
         const data = await response.json();
 
-        const cardPromises = data.cardsForTrade.map(async (cardId: string) => {
-          const lastDashIndex = cardId.lastIndexOf("-");
-          const pack = cardId.substring(0, lastDashIndex);
-          const id = cardId.substring(lastDashIndex + 1);
+        const cardPromises = data.availableToTrade.map(
+          async (cardId: string) => {
+            const lastDashIndex = cardId.lastIndexOf("-");
+            const pack = cardId.substring(0, lastDashIndex);
+            const id = cardId.substring(lastDashIndex + 1);
 
-          const cardResponse = await fetch(`/api/cards/${pack}/${id}`);
-          if (!cardResponse.ok)
-            throw new Error(`Failed to fetch card ${cardId}`);
-          return cardResponse.json();
-        });
+            const cardResponse = await fetch(`/api/cards/${pack}/${id}`);
+            if (!cardResponse.ok)
+              throw new Error(`Failed to fetch card ${cardId}`);
+            return cardResponse.json();
+          }
+        );
 
         const cardDetails = await Promise.all(cardPromises);
         setCards(cardDetails);
@@ -65,7 +67,7 @@ export default function TradeList(): React.ReactElement {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-8">My Trade List</h1>
+        <h1 className="text-2xl font-bold mb-8">Available for Trade</h1>
         <div className="text-red-500 text-center py-8">{error}</div>
       </div>
     );
@@ -74,7 +76,7 @@ export default function TradeList(): React.ReactElement {
   if (!user) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-8">My Trade List</h1>
+        <h1 className="text-2xl font-bold mb-8">Available for Trade</h1>
         <div className="text-center py-8">
           Please sign in to view your trade list
         </div>
@@ -91,7 +93,7 @@ export default function TradeList(): React.ReactElement {
         ← Back to Dashboard
       </Link>
 
-      <h1 className="text-2xl font-bold mb-8">My Trade List</h1>
+      <h1 className="text-2xl font-bold mb-8">Available for Trade</h1>
 
       {cards.length === 0 ? (
         <div className="text-center py-8 text-gray-500">

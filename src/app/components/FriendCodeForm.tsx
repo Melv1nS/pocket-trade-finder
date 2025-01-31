@@ -42,7 +42,7 @@ export function FriendCodeForm({ onComplete }: FriendCodeFormProps) {
     }
 
     try {
-      const response = await fetch("/api/user/friend-code", {
+      const response = await fetch("/api/users/me/friend-code", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

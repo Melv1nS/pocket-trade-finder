@@ -71,8 +71,8 @@ export async function POST(req: Request) {
 
         // Create user document in Firestore with minimal structure
         const userData: UserDocument = {
-          friendCode: null,
-          cardsForTrade: [],
+          "friend-code": null,
+          "available-to-trade": [],
           wishlist: [],
           trades: {
             proposed: [],

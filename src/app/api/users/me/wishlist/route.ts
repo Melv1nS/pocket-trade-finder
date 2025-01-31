@@ -7,10 +7,13 @@ export async function GET() {
     const { userId } = await auth();
     if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
+    // Get user's wishlist from Users collection
     const userDoc = await db.collection("users").doc(userId).get();
-    const wishlist = userDoc.data()?.wishlist || [];
+    const userData = userDoc.data();
 
-    return NextResponse.json({ wishlist });
+    return NextResponse.json({
+      wishlist: userData?.wishlist || [],
+    });
   } catch (error) {
     return new NextResponse(`Internal Server Error: ${error}`, { status: 500 });
   }
@@ -25,18 +28,36 @@ export async function POST(request: Request) {
     if (!cardId)
       return new NextResponse("Card ID is required", { status: 400 });
 
-    const userRef = db.collection("users").doc(userId);
-    const userDoc = await userRef.get();
-    const currentWishlist = userDoc.data()?.wishlist || [];
+    // Get user's friend code
+    const userDoc = await db.collection("users").doc(userId).get();
+    const userData = userDoc.data();
 
-    // Check if card is already in wishlist
-    if (currentWishlist.includes(cardId)) {
-      return NextResponse.json({ success: true });
+    // Add debug logging
+    console.log("User Data:", userData);
+    console.log("Friend Code:", userData?.["friend-code"]);
+
+    if (!userData?.["friend-code"]) {
+      return NextResponse.json(
+        { error: "Friend code required to add to wishlist" },
+        { status: 400 }
+      );
     }
 
-    await userRef.update({
-      wishlist: [...currentWishlist, cardId],
-    });
+    // Add to user's wishlist
+    await db
+      .collection("users")
+      .doc(userId)
+      .update({
+        wishlist: [...(userData.wishlist || []), cardId],
+      });
+
+    // Add user to card's want list
+    await db
+      .collection("card-trades")
+      .doc(cardId)
+      .update({
+        want: [...(await getCardWantList(cardId)), userId],
+      });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -54,6 +75,7 @@ export async function DELETE(request: Request) {
     if (!cardId)
       return new NextResponse("Card ID is required", { status: 400 });
 
+    // Remove from user's wishlist
     const userRef = db.collection("users").doc(userId);
     const userDoc = await userRef.get();
     const currentWishlist = userDoc.data()?.wishlist || [];
@@ -62,9 +84,23 @@ export async function DELETE(request: Request) {
       wishlist: currentWishlist.filter((id: string) => id !== cardId),
     });
 
+    // Remove user from card's want list
+    const cardRef = db.collection("card-trades").doc(cardId);
+    const cardDoc = await cardRef.get();
+    const currentWantList = cardDoc.data()?.want || [];
+
+    await cardRef.update({
+      want: currentWantList.filter((id: string) => id !== userId),
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error in DELETE /api/users/me/wishlist:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
+}
+
+async function getCardWantList(cardId: string): Promise<string[]> {
+  const cardDoc = await db.collection("card-trades").doc(cardId).get();
+  return cardDoc.data()?.want || [];
 }

@@ -4,7 +4,6 @@
 // DELETE - remove a card from trade
 
 import { db } from "@/app/lib/firebase-admin";
-import { FieldValue } from "firebase-admin/firestore";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
@@ -16,26 +15,12 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Get user's available-to-trade list from Users collection
     const userDoc = await db.collection("users").doc(userId).get();
-
-    if (!userDoc.exists) {
-      const newUser = {
-        cardsForTrade: [],
-        wishlist: [],
-        friendCode: "",
-        trades: {
-          proposed: [],
-          requests: [],
-        },
-      };
-
-      await db.collection("users").doc(userId).set(newUser);
-      return NextResponse.json({ cardsForTrade: [] });
-    }
-
     const userData = userDoc.data();
+
     return NextResponse.json({
-      cardsForTrade: userData?.cardsForTrade || [],
+      availableToTrade: userData?.["available-to-trade"] || [],
     });
   } catch (error) {
     console.error("Error fetching user cards:", error);
@@ -56,31 +41,35 @@ export async function POST(request: Request) {
 
     const { cardId } = await request.json();
 
+    // Get user's friend code
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
 
-    if (!userData) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!userData?.["friend-code"]) {
+      return NextResponse.json(
+        { error: "Friend code required to trade" },
+        { status: 400 }
+      );
     }
 
-    // Update user's cardsForTrade
+    // Add to user's available-to-trade list
     await db
       .collection("users")
       .doc(userId)
       .update({
-        cardsForTrade: [...(userData.cardsForTrade || []), cardId],
+        "available-to-trade": [
+          ...(userData["available-to-trade"] || []),
+          cardId,
+        ],
       });
 
-    // Add userId directly to the card document
+    // Add user to card's have list
     await db
-      .collection("cards-for-trade")
+      .collection("card-trades")
       .doc(cardId)
-      .set(
-        {
-          [userId]: true, // Using true as a simple value to indicate presence
-        },
-        { merge: true }
-      ); // Use merge to not overwrite other users
+      .update({
+        have: [...(await getCardHaveList(cardId)), userId],
+      });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -102,30 +91,26 @@ export async function DELETE(request: Request) {
 
     const { cardId } = await request.json();
 
-    const userDoc = await db.collection("users").doc(userId).get();
-    const userData = userDoc.data();
+    // Remove from user's available-to-trade list
+    const userRef = db.collection("users").doc(userId);
+    const userDoc = await userRef.get();
+    const currentAvailableToTrade =
+      userDoc.data()?.["available-to-trade"] || [];
 
-    if (!userData) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    await userRef.update({
+      "available-to-trade": currentAvailableToTrade.filter(
+        (id: string) => id !== cardId
+      ),
+    });
 
-    // Remove card from user's cardsForTrade
-    await db
-      .collection("users")
-      .doc(userId)
-      .update({
-        cardsForTrade: (userData.cardsForTrade || []).filter(
-          (id: string) => id !== cardId
-        ),
-      });
+    // Remove user from card's have list
+    const cardRef = db.collection("card-trades").doc(cardId);
+    const cardDoc = await cardRef.get();
+    const currentHaveList = cardDoc.data()?.have || [];
 
-    // Remove userId from card document
-    await db
-      .collection("cards-for-trade")
-      .doc(cardId)
-      .update({
-        [userId]: FieldValue.delete(),
-      });
+    await cardRef.update({
+      have: currentHaveList.filter((id: string) => id !== userId),
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -135,4 +120,9 @@ export async function DELETE(request: Request) {
       { status: 500 }
     );
   }
+}
+
+async function getCardHaveList(cardId: string): Promise<string[]> {
+  const cardDoc = await db.collection("card-trades").doc(cardId).get();
+  return cardDoc.data()?.have || [];
 }

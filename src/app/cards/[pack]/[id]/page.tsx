@@ -5,11 +5,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { CardThumbnail } from "@/app/components/CardThumbnail";
 
 interface TradingUser {
   userId: string;
-  friendCode: string;
-  wishlist: string[];
+  "friend-code": string;
+  wishlist?: string[];
+  "available-to-trade"?: string[];
 }
 
 interface Card {
@@ -26,15 +28,19 @@ export default function CardPage(): React.ReactElement {
   const pack = params.pack as string;
   const id = params.id as string;
   const [card, setCard] = useState<Card | null>(null);
-  const [tradingUsers, setTradingUsers] = useState<TradingUser[]>([]);
+  const [tradingUsers, setTradingUsers] = useState<{
+    have: TradingUser[];
+    want: TradingUser[];
+  }>({ have: [], want: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [usersError, setUsersError] = useState<string | null>(null);
   const [isMarkingForTrade, setIsMarkingForTrade] = useState(false);
   const [isMarkedForTrade, setIsMarkedForTrade] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [isUpdatingWishlist, setIsUpdatingWishlist] = useState(false);
+  const [showTraders, setShowTraders] = useState(false);
+  const [showWanters, setShowWanters] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -67,8 +73,10 @@ export default function CardPage(): React.ReactElement {
   }, [pack, id]);
 
   const loadTradingUsers = useCallback(async () => {
+    if (!showTraders && !showWanters) return;
+
     try {
-      const response = await fetch(`/api/cards/${pack}/${id}/trading-users`, {
+      const response = await fetch(`/api/cards/${pack}/${id}/owners-of-card`, {
         cache: "no-store",
       });
 
@@ -78,15 +86,14 @@ export default function CardPage(): React.ReactElement {
 
       const data = await response.json();
       setTradingUsers(data.users);
-      setIsMarkedForTrade(data.users.some((u) => u.userId === user?.id));
     } catch (error) {
       if (error instanceof Error) {
-        setUsersError(error.message);
+        setError(error.message);
       }
     } finally {
       setIsLoadingUsers(false);
     }
-  }, [pack, id, user?.id]);
+  }, [pack, id, showTraders, showWanters]);
 
   useEffect(() => {
     if (pack && id) {
@@ -100,9 +107,11 @@ export default function CardPage(): React.ReactElement {
     async function checkWishlist() {
       try {
         const response = await fetch("/api/users/me/wishlist");
-        if (!response.ok) throw new Error("Failed to fetch wishlist");
+        if (!response.ok) throw new Error("Failed to fetch wishlist status");
+
         const data = await response.json();
-        setIsInWishlist(data.wishlist.includes(`${pack}-${id}`));
+        const cardId = `${pack}-${id}`.toLowerCase();
+        setIsInWishlist(data.wishlist.includes(cardId));
       } catch (error) {
         console.error("Error checking wishlist:", error);
       }
@@ -111,29 +120,84 @@ export default function CardPage(): React.ReactElement {
     checkWishlist();
   }, [user, pack, id]);
 
+  useEffect(() => {
+    setShowWanters(isMarkedForTrade);
+  }, [isMarkedForTrade]);
+
+  useEffect(() => {
+    setShowTraders(isInWishlist);
+  }, [isInWishlist]);
+
+  useEffect(() => {
+    if (showTraders || showWanters) {
+      loadTradingUsers();
+    }
+  }, [showTraders, showWanters, loadTradingUsers]);
+
   async function handleMarkForTrade() {
     if (!user) return;
 
     setIsMarkingForTrade(true);
     try {
-      const response = await fetch("/api/users/me/cards-for-trade", {
+      const cardId = `${pack}-${id}`.toLowerCase();
+
+      const response = await fetch("/api/users/me/available-for-trade", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          cardId: `${pack}-${id}`,
-        }),
+        body: JSON.stringify({ cardId }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to mark card for trade");
+        throw new Error(data.error || "Failed to mark card for trade");
       }
 
       setIsMarkedForTrade(true);
       await loadTradingUsers();
     } catch (error) {
       console.error("Error marking card for trade:", error);
+      // Show error to user
+      setError(
+        error instanceof Error ? error.message : "Failed to mark card for trade"
+      );
+    } finally {
+      setIsMarkingForTrade(false);
+    }
+  }
+
+  async function handleRemoveFromTrade() {
+    if (!user) return;
+
+    setIsMarkingForTrade(true);
+    try {
+      const cardId = `${pack}-${id}`.toLowerCase();
+
+      const response = await fetch("/api/users/me/available-for-trade", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ cardId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to remove card from trade");
+      }
+
+      setIsMarkedForTrade(false);
+      await loadTradingUsers();
+    } catch (error) {
+      console.error("Error removing card from trade:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove card from trade"
+      );
     } finally {
       setIsMarkingForTrade(false);
     }
@@ -141,23 +205,32 @@ export default function CardPage(): React.ReactElement {
 
   async function handleWishlistToggle() {
     if (!user) return;
-
     setIsUpdatingWishlist(true);
+
     try {
+      const cardId = `${pack}-${id}`.toLowerCase();
+
       const response = await fetch("/api/users/me/wishlist", {
         method: isInWishlist ? "DELETE" : "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          cardId: `${pack}-${id}`,
-        }),
+        body: JSON.stringify({ cardId }),
       });
 
-      if (!response.ok) throw new Error("Failed to update wishlist");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update wishlist");
+      }
+
       setIsInWishlist(!isInWishlist);
     } catch (error) {
       console.error("Error updating wishlist:", error);
+      // Show error to user
+      setError(
+        error instanceof Error ? error.message : "Failed to update wishlist"
+      );
     } finally {
       setIsUpdatingWishlist(false);
     }
@@ -208,23 +281,30 @@ export default function CardPage(): React.ReactElement {
             </div>
             {user && (
               <div className="mt-4 space-y-2">
-                <button
-                  onClick={handleMarkForTrade}
-                  disabled={isMarkingForTrade || isMarkedForTrade}
-                  className={`w-full px-4 py-2 rounded-lg transition-colors ${
-                    isMarkedForTrade
-                      ? "bg-green-600 text-white cursor-not-allowed"
-                      : isMarkingForTrade
-                      ? "bg-gray-400 text-white cursor-wait"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
-                >
-                  {isMarkedForTrade
-                    ? "Marked for Trade"
-                    : isMarkingForTrade
-                    ? "Marking..."
-                    : "Mark for Trade"}
-                </button>
+                {isMarkedForTrade ? (
+                  <button
+                    onClick={handleRemoveFromTrade}
+                    disabled={isMarkingForTrade}
+                    className={`w-full px-4 py-2 rounded-lg transition-colors 
+                      bg-red-600 text-white hover:bg-red-700
+                      ${isMarkingForTrade ? "opacity-50 cursor-wait" : ""}`}
+                  >
+                    {isMarkingForTrade ? "Removing..." : "Remove from Trade"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleMarkForTrade}
+                    disabled={isMarkingForTrade}
+                    className={`w-full px-4 py-2 rounded-lg transition-colors 
+                      ${
+                        isMarkingForTrade
+                          ? "bg-gray-400 text-white cursor-wait"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                      }`}
+                  >
+                    {isMarkingForTrade ? "Marking..." : "Mark for Trade"}
+                  </button>
+                )}
                 <button
                   onClick={handleWishlistToggle}
                   disabled={isUpdatingWishlist}
@@ -279,70 +359,86 @@ export default function CardPage(): React.ReactElement {
           </div>
         </div>
 
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-            Available for Trade
-          </h2>
-
-          {isLoadingUsers ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            </div>
-          ) : usersError ? (
-            <div className="text-red-500 text-center py-8">
-              Failed to load trading users
-            </div>
-          ) : tradingUsers.length === 0 ? (
-            <div className="text-gray-500 dark:text-gray-400 text-center py-8">
-              No users currently have this card available for trade
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {tradingUsers
-                .filter((user) => user.friendCode)
-                .map((user) => (
-                  <div
-                    key={user.userId}
-                    className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-gray-900 dark:text-white font-medium">
-                          Friend Code: {user.friendCode}
-                        </p>
-                        {user.wishlist.length > 0 ? (
-                          <div className="mt-2">
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              Looking for:
-                            </p>
-                            <ul className="mt-1 space-y-1">
-                              {user.wishlist.map((cardPath) => (
-                                <li
-                                  key={cardPath}
-                                  className="text-sm text-gray-600 dark:text-gray-300"
-                                >
-                                  {cardPath}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : (
-                          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            No specific cards wanted
-                          </p>
-                        )}
+        <div
+          className={`mt-8 ${
+            showTraders && showWanters
+              ? "grid grid-cols-1 md:grid-cols-2 gap-8"
+              : "space-y-8"
+          }`}
+        >
+          {showTraders && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+              <h2 className="text-xl font-bold mb-4">
+                People who have this card
+              </h2>
+              {isLoadingUsers ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                </div>
+              ) : tradingUsers.have.length === 0 ? (
+                <p className="text-gray-500">
+                  No one is trading this card yet.
+                </p>
+              ) : (
+                <ul className="space-y-4">
+                  {tradingUsers.have.map((user) => (
+                    <li
+                      key={user.userId}
+                      className="border-b pb-4 last:border-0"
+                    >
+                      <p className="font-medium">
+                        Friend Code: {user["friend-code"]}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        They are looking for:
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {user.wishlist?.map((cardId) => (
+                          <CardThumbnail key={cardId} cardId={cardId} />
+                        ))}
                       </div>
-                      <button
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        onClick={() => {
-                          console.log("Propose trade with:", user.friendCode);
-                        }}
-                      >
-                        Propose Trade
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {showWanters && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+              <h2 className="text-xl font-bold mb-4">
+                People who want this card
+              </h2>
+              {isLoadingUsers ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                </div>
+              ) : tradingUsers.want.length === 0 ? (
+                <p className="text-gray-500">
+                  No one is looking for this card yet.
+                </p>
+              ) : (
+                <ul className="space-y-4">
+                  {tradingUsers.want.map((user) => (
+                    <li
+                      key={user.userId}
+                      className="border-b pb-4 last:border-0"
+                    >
+                      <p className="font-medium">
+                        Friend Code: {user["friend-code"]}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        They have the following available to trade:
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {user["available-to-trade"]?.map((cardId) => (
+                          <CardThumbnail key={cardId} cardId={cardId} />
+                        ))}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </div>

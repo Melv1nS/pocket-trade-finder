@@ -124,23 +124,24 @@ export default function Dashboard(): React.ReactElement {
 
           <div className="flex gap-4 mb-8">
             <Link
-              href="/dashboard/trade-list"
+              href="/dashboard/available-for-trade"
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Trade List
             </Link>
             <Link
-              href="/dashboard/wish-list"
+              href="/dashboard/wishlist"
               className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               Wish List
             </Link>
-            <Link
-              href="/dashboard/trades"
-              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            <button
+              disabled
+              title="Coming Soon!"
+              className="px-6 py-3 bg-purple-400 text-white rounded-lg cursor-not-allowed opacity-70"
             >
               Trades
-            </Link>
+            </button>
           </div>
 
           {isLoadingCards ? (

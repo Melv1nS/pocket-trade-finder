@@ -14,7 +14,7 @@ export async function GET() {
     }
 
     const userDoc = await db.collection("users").doc(userId).get();
-    const friendCode = userDoc.get("friendCode");
+    const friendCode = userDoc.get("friend-code");
 
     return NextResponse.json({
       hasFriendCode: userDoc.exists && friendCode ? true : false,
@@ -54,8 +54,8 @@ export async function POST(request: Request) {
       .doc(userId)
       .set(
         {
-          friendCode,
-          cardsForTrade: [],
+          "friend-code": friendCode,
+          "available-to-trade": [],
           wishlist: [],
           trades: { proposed: [], requests: [] },
         },
